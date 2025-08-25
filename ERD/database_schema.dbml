@@ -1,0 +1,149 @@
+Project airbnb_clone {
+  database_type: "PostgreSQL"
+  Note: "Database schema for Airbnb Clone Project"
+}
+
+/////////////////////////////////////////////////
+// USERS
+/////////////////////////////////////////////////
+Table User {
+  user_id uuid [pk] // Primary Key, UUID, Indexed
+  first_name varchar [not null]
+  last_name varchar [not null]
+  email varchar [unique, not null] // Indexed
+  password_hash varchar [not null]
+  phone_number varchar [null]
+  role role_enum [not null] // ENUM (guest, host, admin)
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    email
+  }
+
+  Note: "Users can be guests, hosts, or admins with full profile information"
+}
+
+/////////////////////////////////////////////////
+// PROPERTIES
+/////////////////////////////////////////////////
+Table Property {
+  property_id uuid [pk] // Primary Key, UUID, Indexed
+  host_id uuid [ref: > User.user_id, not null] // Foreign Key
+  name varchar [not null]
+  description text [not null]
+  location varchar [not null]
+  pricepernight decimal [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`]
+
+  indexes {
+    property_id
+  }
+
+  Note: "Properties hosted by users with detailed information and pricing"
+}
+
+/////////////////////////////////////////////////
+// BOOKINGS
+/////////////////////////////////////////////////
+Table Booking {
+  booking_id uuid [pk] // Primary Key, UUID, Indexed
+  property_id uuid [ref: > Property.property_id, not null] // Foreign Key
+  user_id uuid [ref: > User.user_id, not null] // Foreign Key
+  start_date date [not null]
+  end_date date [not null]
+  total_price decimal [not null]
+  status booking_status_enum [not null] // ENUM (pending, confirmed, canceled)
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    property_id
+    booking_id
+  }
+
+  Note: "Bookings link users to properties with dates and pricing"
+}
+
+/////////////////////////////////////////////////
+// PAYMENTS
+/////////////////////////////////////////////////
+Table Payment {
+  payment_id uuid [pk] // Primary Key, UUID, Indexed
+  booking_id uuid [ref: > Booking.booking_id, not null] // Foreign Key
+  amount decimal [not null]
+  payment_date timestamp [default: `CURRENT_TIMESTAMP`]
+  payment_method payment_method_enum [not null] // ENUM (credit_card, paypal, stripe)
+
+  Note: "Payments are linked to bookings with method and timing details"
+}
+
+/////////////////////////////////////////////////
+// REVIEWS
+/////////////////////////////////////////////////
+Table Review {
+  review_id uuid [pk] // Primary Key, UUID, Indexed
+  property_id uuid [ref: > Property.property_id, not null] // Foreign Key
+  user_id uuid [ref: > User.user_id, not null] // Foreign Key
+  rating integer [not null, note: 'CHECK: rating >= 1 AND rating <= 5']
+  comment text [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Note: "Reviews by users for properties with ratings 1-5"
+}
+
+/////////////////////////////////////////////////
+// MESSAGES
+/////////////////////////////////////////////////
+Table Message {
+  message_id uuid [pk] // Primary Key, UUID, Indexed
+  sender_id uuid [ref: > User.user_id, not null] // Foreign Key
+  recipient_id uuid [ref: > User.user_id, not null] // Foreign Key
+  message_body text [not null]
+  sent_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Note: "Messages between users for communication"
+}
+
+/////////////////////////////////////////////////
+// ENUMS
+/////////////////////////////////////////////////
+Enum role_enum {
+  guest
+  host
+  admin
+}
+
+Enum booking_status_enum {
+  pending
+  confirmed
+  canceled
+}
+
+Enum payment_method_enum {
+  credit_card
+  paypal
+  stripe
+}
+
+/////////////////////////////////////////////////
+// RELATIONSHIP SUMMARY
+/////////////////////////////////////////////////
+// - A User can host multiple Properties (host_id)
+// - A User can make multiple Bookings (user_id)
+// - A User can write multiple Reviews (user_id)
+// - A User can send/receive multiple Messages (sender_id/recipient_id)
+// - A Property can have multiple Bookings and Reviews
+// - A Booking belongs to one User (guest), one Property, and has one Payment
+// - A Review belongs to one User and one Property
+// - A Payment belongs to one Booking
+// - A Message belongs to sender and recipient Users
+
+/////////////////////////////////////////////////
+// CONSTRAINTS & INDEXING
+/////////////////////////////////////////////////
+// Primary Keys: All tables have UUID primary keys (automatically indexed)
+// Unique Constraints: User.email
+// Foreign Key Constraints: All relationships enforced
+// Check Constraints: Review.rating (1-5)
+// Additional Indexes: User.email, Property.property_id, Booking.property_id, Booking.booking_id
+// ENUM Constraints: User.role, Booking.status, Payment.payment_method
